@@ -14,9 +14,26 @@ enable_language(Pascal)
 add_flag_append(CMAKE_Pascal_FLAGS "-Cs2000000 -B")
 #add_flag_append(CMAKE_Pascal_FLAGS_DEBUG "-gv")
 add_flag_append(CMAKE_Pascal_FLAGS_RELEASE "-Xs")
+
 if(UNIX)
     include(TargetArch)
     target_architecture(CMAKE_TARGET_ARCHITECTURES)
+    
+    # ARM64 FIX: On macOS ARM64, disable aggressive optimizations that break ABI
+    # FPC on ARM64 has issues with register preservation when calling C code
+    if(APPLE AND ${CMAKE_TARGET_ARCHITECTURES} MATCHES "arm64|aarch64")
+        message(STATUS "ARM64 detected - adding conservative compiler flags")
+        # Use -O1 instead of -O2 to avoid aggressive register optimizations
+        string(REPLACE "-O2" "-O1" CMAKE_Pascal_FLAGS_RELEASE "${CMAKE_Pascal_FLAGS_RELEASE}")
+        # Note: -Cfv is for VFP (Vector Floating Point) which doesn't apply to ARM64
+        # ARM64 uses NEON/Advanced SIMD by default
+        # CRITICAL: Disable hardened runtime features that conflict with FPC's code generation
+        # FPC's ARM64 backend doesn't generate code compatible with Apple's strict W^X enforcement
+        # Pass linker flags through FPC with -k prefix and proper format
+        add_flag_append(CMAKE_Pascal_FLAGS "-k-no_adhoc_codesign")
+        add_flag_append(CMAKE_Pascal_FLAGS "-k-no_fixup_chains")
+    endif()
+    
     if(${CMAKE_Pascal_COMPILER_VERSION} VERSION_GREATER 2.7 OR ${CMAKE_TARGET_ARCHITECTURES} MATCHES "x86_64" OR ${CMAKE_TARGET_ARCHITECTURES} MATCHES "i386")
         add_flag_append(CMAKE_Pascal_FLAGS "-fPIC")
     endif()
@@ -238,10 +255,23 @@ else()
     set(engine_output_name "hwengine${CMAKE_EXECUTABLE_SUFFIX}")
     set(destination_dir ${target_binary_install_dir})
     set_source_files_properties(hwengine.pas PROPERTIES OBJECT_DEPENDS "${sourcefiles_sofar}")
+    
+    # ARM64 FIX: Add register initialization for macOS ARM64
+    if(APPLE)
+        add_library(arm64_init OBJECT arm64_init.c)
+        # Set the deployment target for the C file to match the project
+        set_target_properties(arm64_init PROPERTIES
+            OSX_DEPLOYMENT_TARGET "11.0")
+        # Pass the object file to FPC linker via -k flag
+        add_flag_append(CMAKE_Pascal_FLAGS "-k${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/arm64_init.dir/arm64_init.c.o")
+        add_flag_append(CMAKE_Pascal_FLAGS "-k-lm")  # Link math library
+    endif()
+    
     add_executable(hwengine hwengine.pas)
+    target_link_libraries(hwengine ${HW_LINK_LIBS} hwengine_future)
 endif()
 
 #even though not actually used, this will trigger relink if any lib changes
-target_link_libraries(hwengine ${HW_LINK_LIBS} hwengine_future)
+# (already handled above for ARM64)
 
 install(PROGRAMS "${EXECUTABLE_OUTPUT_PATH}/${engine_output_name}" DESTINATION ${destination_dir})

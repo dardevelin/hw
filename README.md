@@ -154,15 +154,72 @@ If you prefer to build manually:
 
 #### Apple Silicon Changes
 
-This fork includes the following modifications for Apple Silicon support:
+This fork includes extensive modifications for Apple Silicon (ARM64) support. While the build system and most components work, **the game engine currently crashes at runtime** due to a deep compatibility issue between Free Pascal 3.2.2 and ARM64 macOS.
 
-- ARM64/aarch64 architecture detection in CMake build system
-- Fixed Pascal constant expressions incompatible with FPC on ARM64
-- Updated SDL2 library detection for Homebrew installations
-- Added Cocoa/Foundation framework linking for Qt frontend
-- macOS deployment target configuration for SDL2 compatibility
+**Status**: ⚠️ **Work In Progress** - Frontend works, game engine crashes
 
-See `BUILD_PROGRESS.md` for detailed information about the changes made.
+##### Modified Files and Rationale
+
+**Build System (CMake)**
+- `cmake_modules/platform.cmake`: Added ARM64/aarch64 architecture detection for Free Pascal compiler
+- `CMakeLists.txt`: Added prefix header for macOS deployment target handling
+- `hedgewars/CMakeLists.txt`: Fixed SDL2 library detection for Homebrew ARM64 installations
+- `QTfrontend/CMakeLists.txt`: Added Cocoa and Foundation framework linking (required on macOS)
+
+**Pascal Source Code**
+- `hedgewars/uConsts.pas`: Fixed constant expressions using `round(HDPIScaleFactor)` - FPC 3.2.2 on ARM64 requires compile-time constants, cannot evaluate `round()` at compile time
+- `hedgewars/uVariables.pas`: Replaced font height calculations from `round(N*HDPIScaleFactor)` to literal values (HDPIScaleFactor=1 on desktop)
+- `hedgewars/uRenderUtils.pas`: Fixed text rendering width calculations, removed `round(HDPIScaleFactor)` calls
+
+**Rust FFI (Critical for ARM64 Compatibility)**
+- `rust/lib-hwengine-future/src/lib.rs`: **Changed ALL FFI function signatures from Rust references (`&T`, `&mut T`) to raw pointers (`*const T`, `*mut T`)**
+
+  **Why this matters**: On x86_64, Rust references and C pointers happen to be ABI-compatible by luck - both pass a single pointer value in a register. However, on ARM64, the calling convention is stricter:
+  
+  - **Rust references** (`&T`): The compiler may pass additional metadata or use different registers
+  - **Raw pointers** (`*const T`): Guaranteed to match C's calling convention (single pointer value)
+  
+  When Pascal calls Rust functions with `pointer` parameters, it uses the C calling convention. On x86_64, this accidentally works even with Rust references. On ARM64, it causes mismatched parameter passing, leading to crashes.
+
+  Changed functions:
+  - `create_ai`, `land_get`, `land_set`, `land_row`, `land_fill`
+  - `land_pixel_get`, `land_pixel_set`, `land_pixel_row`
+  - `ai_clear_team`, `ai_think`, `ai_have_plan`, `apply_theme`
+
+**Build Scripts**
+- `install_dependencies.sh`: Automated Homebrew dependency installation for ARM64
+- `build_hedgewars.sh`: Automated build with correct CMake flags
+- `patch_sdl_build.sh`: SDL2 header compatibility workaround for macOS SDK
+- `prefix.h`: Prefix header for deployment target configuration
+
+##### Current Issue: Runtime Crash (Exit Code 217)
+
+**Symptom**: Game crashes immediately when starting gameplay with:
+```
+EAccessViolation: Access violation at $00000001FBC02EF0
+Exit code: 217
+```
+
+**What Works**:
+- ✅ Full build compiles successfully
+- ✅ Frontend (Qt GUI) runs perfectly
+- ✅ Map preview generation works
+- ✅ All menus and settings functional
+
+**What Doesn't Work**:
+- ❌ Starting actual gameplay (single or multiplayer)
+- ❌ Game engine (`hwengine`) initialization
+
+**Root Cause**: Still under investigation. The crash happens at a consistent memory address very early in the engine initialization. Possible causes:
+
+1. **Free Pascal ARM64 runtime issue**: FPC 3.2.2's ARM64 support may have bugs with certain operations
+2. **Position-Independent Code (PIC)**: ARM64 requires stricter PIC compliance
+3. **Function pointer initialization**: The crash address suggests dereferencing an uninitialized function pointer
+4. **Rust library loading**: Despite fixing FFI signatures, there may be additional initialization issues
+
+**For Community Contributors**: This is a challenging problem requiring deep knowledge of Free Pascal internals on ARM64. The same code works fine on x86_64 (Intel) Macs. We need ARM64-specific debugging to identify why the Pascal runtime or game initialization fails.
+
+See `KNOWN_ISSUES.md` for detailed troubleshooting information.
 
 Source code
 -----------

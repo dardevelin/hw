@@ -189,7 +189,7 @@ pub unsafe extern "C" fn generate_maze_game_field(
 
 #[no_mangle]
 pub unsafe extern "C" fn apply_theme(
-    game_field: &mut GameField,
+    game_field: *mut GameField,
     data_path: *const c_char,
     theme_name: *const c_char,
 ) {
@@ -207,55 +207,57 @@ pub unsafe extern "C" fn apply_theme(
     )
     .unwrap();
 
-    let params = game_field
+    let params = (*game_field)
         .landgen_parameters
         .expect("Land generator parameters specified");
-    let pixels = map_gen.make_texture(&game_field.collision, &params, &theme);
+    let pixels = map_gen.make_texture(&(*game_field).collision, &params, &theme);
 
-    game_field.pixels = pixels.into();
+    (*game_field).pixels = pixels.into();
 }
 
 #[no_mangle]
-pub extern "C" fn land_get(game_field: &GameField, x: i32, y: i32) -> u16 {
-    game_field.collision.get(y, x)
+pub extern "C" fn land_get(game_field: *const GameField, x: i32, y: i32) -> u16 {
+    unsafe { (*game_field).collision.get(y, x) }
 }
 
 #[no_mangle]
-pub extern "C" fn land_set(game_field: &mut GameField, x: i32, y: i32, value: u16) {
-    game_field.collision.map(y, x, |p| *p = value);
+pub extern "C" fn land_set(game_field: *mut GameField, x: i32, y: i32, value: u16) {
+    unsafe { (*game_field).collision.map(y, x, |p| *p = value); }
 }
 
 #[no_mangle]
-pub extern "C" fn land_row(game_field: &mut GameField, row: i32) -> *mut u16 {
-    game_field.collision[row as usize].as_mut_ptr()
+pub extern "C" fn land_row(game_field: *mut GameField, row: i32) -> *mut u16 {
+    unsafe { (&mut (*game_field).collision)[row as usize].as_mut_ptr() }
 }
 
 #[no_mangle]
 pub extern "C" fn land_fill(
-    game_field: &mut GameField,
+    game_field: *mut GameField,
     x: i32,
     y: i32,
     border_value: u16,
     fill_value: u16,
 ) {
-    game_field
-        .collision
-        .fill(Point::new(x, y), border_value, fill_value)
+    unsafe {
+        (*game_field)
+            .collision
+            .fill(Point::new(x, y), border_value, fill_value)
+    }
 }
 
 #[no_mangle]
-pub extern "C" fn land_pixel_get(game_field: &GameField, x: i32, y: i32) -> u32 {
-    game_field.pixels.get(y, x)
+pub extern "C" fn land_pixel_get(game_field: *const GameField, x: i32, y: i32) -> u32 {
+    unsafe { (*game_field).pixels.get(y, x) }
 }
 
 #[no_mangle]
-pub extern "C" fn land_pixel_set(game_field: &mut GameField, x: i32, y: i32, value: u32) {
-    game_field.pixels.map(y, x, |p| *p = value);
+pub extern "C" fn land_pixel_set(game_field: *mut GameField, x: i32, y: i32, value: u32) {
+    unsafe { (*game_field).pixels.map(y, x, |p| *p = value); }
 }
 
 #[no_mangle]
-pub extern "C" fn land_pixel_row(game_field: &mut GameField, row: i32) -> *mut u32 {
-    game_field.pixels[row as usize].as_mut_ptr()
+pub extern "C" fn land_pixel_row(game_field: *mut GameField, row: i32) -> *mut u32 {
+    unsafe { (&mut (*game_field).pixels)[row as usize].as_mut_ptr() }
 }
 
 #[no_mangle]
@@ -264,13 +266,16 @@ pub unsafe extern "C" fn dispose_game_field(game_field: *mut GameField) {
 }
 
 #[no_mangle]
-pub extern "C" fn create_ai(game_field: &GameField) -> *mut AI {
-    Box::into_raw(Box::new(AI::new(game_field)))
+pub extern "C" fn create_ai(game_field: *const GameField) -> *mut AI<'static> {
+    // SAFETY: Caller must ensure game_field outlives the AI
+    // We use 'static because FFI doesn't track lifetimes
+    let game_field_ref: &'static GameField = unsafe { &*(game_field as *const GameField) };
+    Box::into_raw(Box::new(AI::new(game_field_ref)))
 }
 
 #[no_mangle]
-pub extern "C" fn ai_clear_team(ai: &mut AI) {
-    *ai.get_team_mut() = vec![];
+pub extern "C" fn ai_clear_team(ai: *mut AI) {
+    unsafe { *(*ai).get_team_mut() = vec![]; }
 }
 
 #[no_mangle]
@@ -292,13 +297,13 @@ pub unsafe extern "C" fn ai_add_team_hedgehog(
 }
 
 #[no_mangle]
-pub extern "C" fn ai_think(ai: &mut AI) {
-    ai.plan()
+pub extern "C" fn ai_think(ai: *mut AI) {
+    unsafe { (*ai).plan() }
 }
 
 #[no_mangle]
-pub extern "C" fn ai_have_plan(ai: &AI) -> bool {
-    ai.have_plan()
+pub extern "C" fn ai_have_plan(ai: *const AI) -> bool {
+    unsafe { (*ai).have_plan() }
 }
 
 #[no_mangle]
