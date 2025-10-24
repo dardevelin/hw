@@ -133,7 +133,7 @@ if(APPLE AND (NOT BUILD_ENGINE_LIBRARY))
     add_flag_append(CMAKE_Pascal_FLAGS "-k-framework -kOpenGL")
 
     #set the correct library or framework style depending on the main SDL
-    string(FIND "${SDL2_LIBRARIES}" "dylib" sdl_framework)
+    string(FIND "${SDL2_IMAGE_LIBRARY}" "dylib" sdl_framework)
     if(${sdl_framework} GREATER -1)
         add_flag_append(CMAKE_Pascal_FLAGS "-k-lsdl2 -k-lsdl2_image -k-lsdl2_mixer -k-lsdl2_ttf -k-lsdl2_net")
     else()

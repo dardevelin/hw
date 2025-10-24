@@ -15,6 +15,13 @@ endforeach()
 
 project(hedgewars VERSION 1.1.0)
 
+# Fix for macOS: SDL2 requires MAC_OS_X_VERSION_MIN_REQUIRED >= 10.7
+# Use prefix header to ensure the macro is set before any includes
+if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include ${CMAKE_SOURCE_DIR}/prefix.h")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${CMAKE_SOURCE_DIR}/prefix.h")
+endif()
+
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules")
 include(${CMAKE_MODULE_PATH}/utils.cmake)
 

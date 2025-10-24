@@ -110,6 +110,60 @@ See the `INSTALL.md` file.
 
 Or see our wiki at <https://hedgewars.org/kb/BuildingHedgewars>.
 
+### Building on Apple Silicon (macOS ARM64)
+
+Special instructions for building Hedgewars on Apple Silicon Macs:
+
+#### Quick Start
+
+1. **Install dependencies**:
+   ```bash
+   ./install_dependencies.sh
+   ```
+
+2. **Build the game**:
+   ```bash
+   ./build_hedgewars.sh
+   ```
+
+The built `Hedgewars.app` will be located in the `build/` directory.
+
+#### Manual Build Process
+
+If you prefer to build manually:
+
+1. **Install Homebrew dependencies**:
+   ```bash
+   brew install cmake qt sdl2 sdl2_image sdl2_mixer sdl2_net sdl2_ttf \
+                freetype glew lua physfs libpng fpc
+   ```
+
+2. **Configure and build**:
+   ```bash
+   mkdir build && cd build
+   cmake .. \
+     -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt \
+     -DCMAKE_BUILD_TYPE=Release \
+     -DNOSERVER=1 \
+     -DNOAUTOUPDATE=1 \
+     -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
+   make -j$(sysctl -n hw.ncpu)
+   ```
+
+3. **Note**: Due to compatibility issues with SDL2 headers and the macOS SDK, a temporary patch to SDL headers may be required. The build scripts handle this automatically.
+
+#### Apple Silicon Changes
+
+This fork includes the following modifications for Apple Silicon support:
+
+- ARM64/aarch64 architecture detection in CMake build system
+- Fixed Pascal constant expressions incompatible with FPC on ARM64
+- Updated SDL2 library detection for Homebrew installations
+- Added Cocoa/Foundation framework linking for Qt frontend
+- macOS deployment target configuration for SDL2 compatibility
+
+See `BUILD_PROGRESS.md` for detailed information about the changes made.
+
 Source code
 -----------
 Our main repository is located at <https://hg.hedgewars.org/hedgewars/> using

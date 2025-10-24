@@ -207,7 +207,9 @@ qt5_wrap_cpp(hwfr_moc_srcs ${hwfr_moc_hdrs})
 
 if(APPLE)
     find_library(iokit_framework NAMES IOKit)
-    list(APPEND HW_LINK_LIBS ${iokit_framework})
+    find_library(cocoa_framework NAMES Cocoa)
+    find_library(foundation_framework NAMES Foundation)
+    list(APPEND HW_LINK_LIBS ${iokit_framework} ${cocoa_framework} ${foundation_framework})
     list(APPEND hwfr_src util/platform/CocoaInitializer.mm
                          util/platform/InstallController.cpp
                          util/platform/M3Panel.mm

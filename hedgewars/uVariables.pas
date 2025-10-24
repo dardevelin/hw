@@ -357,36 +357,36 @@ var
 const
     FontzInit: array[THWFont] of THHFont = (
             (Handle: nil;
-            Height: round(12*HDPIScaleFactor);
+            Height: 12;
             style: TTF_STYLE_NORMAL;
             Name: 'DejaVuSans-Bold.ttf'),
             (Handle: nil;
-            Height: round(24*HDPIScaleFactor);
+            Height: 24;
             style: TTF_STYLE_NORMAL;
             Name: 'DejaVuSans-Bold.ttf'),
             (Handle: nil;
-            Height: round(10*HDPIScaleFactor);
+            Height: 10;
             style: TTF_STYLE_NORMAL;
             Name: 'DejaVuSans-Bold.ttf'),
             (Handle: nil; // fntChat
-            Height: round(12*HDPIScaleFactor);
+            Height: 12;
             style: TTF_STYLE_NORMAL;
             Name: 'DejaVuSans-Bold.ttf')
             {$IFNDEF MOBILE}, // remove chinese fonts for now
             (Handle: nil;
-            Height: round(12*HDPIScaleFactor);
+            Height: 12;
             style: TTF_STYLE_NORMAL;
             Name: 'wqy-zenhei.ttc'),
             (Handle: nil;
-            Height: round(24*HDPIScaleFactor);
+            Height: 24;
             style: TTF_STYLE_NORMAL;
             Name: 'wqy-zenhei.ttc'),
             (Handle: nil;
-            Height: round(10*HDPIScaleFactor);
+            Height: 10;
             style: TTF_STYLE_NORMAL;
             Name: 'wqy-zenhei.ttc'),
             (Handle: nil; // CJKfntChat
-            Height: round(12*HDPIScaleFactor);
+            Height: 12;
             style: TTF_STYLE_NORMAL;
             Name: 'wqy-zenhei.ttc')
             {$ENDIF}
