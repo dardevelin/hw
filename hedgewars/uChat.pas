@@ -1392,6 +1392,15 @@ end;
 procedure initModule;
 var i: ShortInt;
 begin
+    
+    // ARM64 FIX: Initialize ALL global record/array structures FIRST
+    // Free Pascal on ARM64 has issues with direct field access on uninitialized globals
+    FillChar(Strs, SizeOf(Strs), 0);
+    FillChar(MStrs, SizeOf(MStrs), 0);
+    FillChar(LocalStrs, SizeOf(LocalStrs), 0);
+    FillChar(InputStr, SizeOf(InputStr), 0);
+    FillChar(InputLinePrefix, SizeOf(InputLinePrefix), 0);
+    
     RegisterVariable('chatmsg', @chChatMessage, true);
     RegisterVariable('say', @chSay, true);
     RegisterVariable('team', @chTeamSay, true);
@@ -1413,15 +1422,17 @@ begin
     LastUIScaleValue:= 0;
     SkipNextInput:= false;
 
-    InputLinePrefix.Tex:= nil;
     UpdateInputLinePrefix();
-    inputStr.s:= '';
-    inputStr.Tex := nil;
-    for i:= 0 to MaxStrIndex do
-        Strs[i].Tex := nil;
 
     LastKeyPressTick:= 0;
-    ResetCursor();
+    
+    // ARM64 FIX: Don't call ResetCursor/UpdateCursorCoords during init - causes stack corruption
+    // Just set the values directly
+    selectedPos:= -1;
+    cursorPos:= 0;
+    cursorX:= 0;
+    selectionDx:= 0;
+    
     SDL_StopTextInput();
 end;
 

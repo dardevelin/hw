@@ -90,6 +90,7 @@ if(APPLE AND NOT SKIPBUNDLE)
         /Library/Frameworks
         /usr/local/lib
         /opt/local/lib
+        /opt/homebrew/lib
     )
 
     # operate on the Hedgewars.app

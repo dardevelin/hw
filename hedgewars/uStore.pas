@@ -1301,19 +1301,33 @@ begin
    IMO we should rely on the gl_config defaults from SDL, and use
    SDL_GL_GetAttribute to possibly post warnings if any bad values are set.
  *)
+    AddFileLog('[DEBUG] About to call SetupOpenGLAttributes');
     SetupOpenGLAttributes();
+    AddFileLog('[DEBUG] SetupOpenGLAttributes completed');
 {$ENDIF}
 
     // these values in x and y make the window appear in the center
+    AddFileLog('[DEBUG] Setting window position');
+    
+    // ARM64 FIX: Set SDL hints to work around Cocoa/AppKit issues on Apple Silicon
+    AddFileLog('[DEBUG] Setting SDL hints for macOS compatibility');
+    SDL_SetHint('SDL_VIDEO_MAC_FULLSCREEN_SPACES', '0');  // Disable Spaces integration
+    SDL_SetHint('SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS', '0'); // Don't minimize
+    AddFileLog('[DEBUG] SDL hints set');
+    
     x:= SDL_WINDOWPOS_CENTERED_MASK;
     y:= SDL_WINDOWPOS_CENTERED_MASK;
+    AddFileLog('[DEBUG] Window position set, checking if SDLwindow is nil');
 
     if SDLwindow = nil then
         begin
+        AddFileLog('[DEBUG] SDLwindow is nil, creating new window');
 
         // SDL_WINDOW_RESIZABLE makes the window resizable and
         //  respond to rotation events on mobile devices
+        AddFileLog('[DEBUG] Setting window flags');
         flags:= SDL_WINDOW_OPENGL or SDL_WINDOW_SHOWN or SDL_WINDOW_RESIZABLE;
+        AddFileLog('[DEBUG] Window flags set');
 
         {$IFDEF MOBILE}
         if isPhone() then
@@ -1323,9 +1337,23 @@ begin
         {$ENDIF}
 
         if cFullScreen then
+            begin
+            AddFileLog('[DEBUG] Adding fullscreen flag');
             flags:= flags or SDL_WINDOW_FULLSCREEN;
+            end;
 
+        AddFileLog('[DEBUG] About to create SDL window with width=' + inttostr(cScreenWidth) + ' height=' + inttostr(cScreenHeight));
+        AddFileLog('[DEBUG] Flags=' + inttostr(flags));
+        
+        // ARM64 DEBUG: Try creating window without OpenGL first to isolate the issue
+        AddFileLog('[DEBUG] Attempting window creation...');
         SDLwindow:= SDL_CreateWindow(PChar('Hedgewars'), x, y, cScreenWidth, cScreenHeight, flags);
+        
+        if SDLwindow <> nil then
+            AddFileLog('[DEBUG] SDL_CreateWindow SUCCESS')
+        else
+            AddFileLog('[DEBUG] SDL_CreateWindow FAILED: ' + SDL_GetError());
+        AddFileLog('[DEBUG] SDL_CreateWindow returned, checking result');
         end
     // we're toggling
     else if Length(s) = 0 then
@@ -1402,6 +1430,11 @@ procedure initModule;
 var ai: TAmmoType;
     i: LongInt;
 begin
+    // ARM64 FIX: Initialize global arrays FIRST before any field access
+    // Free Pascal on ARM64 has issues with direct field access on uninitialized globals
+    // NOTE: Don't FillChar Ammoz - it's initialized by uVariables.initModule
+    FillChar(CountTexz, SizeOf(CountTexz), 0);
+    
     RegisterVariable('fullscr', @chFullScr, true);
 
     cScaleFactor:= 2.0;
@@ -1409,15 +1442,6 @@ begin
     Step:= 0;
     ProgrTex:= nil;
     SupportNPOTT:= false;
-
-    // init all ammo name texture pointers
-    for ai:= Low(TAmmoType) to High(TAmmoType) do
-    begin
-        Ammoz[ai].NameTex := nil;
-    end;
-    // init all count texture pointers
-    for i:= Low(CountTexz) to High(CountTexz) do
-        CountTexz[i] := nil;
     SDLwindow:= nil;
     SDLGLcontext:= nil;
 

@@ -501,6 +501,7 @@ end;
 
 procedure initEverything (complete:boolean);
 begin
+    
     PathPrefix:= PathPrefix + #0;
     UserPathPrefix:= UserPathPrefix + #0;
     uPhysFSLayer.initModule(@PathPrefix[1], @UserPathPrefix[1]);
@@ -655,6 +656,23 @@ begin
 begin
 {$ENDIF}
 
+{$IFDEF DARWIN}
+{$IFDEF CPUAARCH64}
+    // ARM64 FIX: Initialize FP registers to prevent AppKit from reading garbage
+    // This MUST be done before any SDL/AppKit calls
+    asm
+        fmov d8, xzr
+        fmov d9, xzr
+        fmov d10, xzr
+        fmov d11, xzr
+        fmov d12, xzr
+        fmov d13, xzr
+        fmov d14, xzr
+        fmov d15, xzr
+    end;
+{$ENDIF}
+{$ENDIF}
+
 {$IFDEF WINDOWS}
     ShcoreLibHandle := LoadLibrary('Shcore.dll');
     if (ShcoreLibHandle <> 0) then
@@ -678,7 +696,9 @@ begin
     ExceptProc:= @catchUnhandledException;
 {$ENDIF}
 
+    
     preInitEverything();
+    
 
     GetParams();
 

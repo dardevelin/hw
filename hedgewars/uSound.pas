@@ -1040,6 +1040,11 @@ procedure initModule;
 var t: LongInt;
     i: TSound;
 begin
+    // ARM64 FIX: Initialize global voicepacks array FIRST
+    // Free Pascal on ARM64 has issues with direct field access on uninitialized globals
+    FillChar(voicepacks, SizeOf(voicepacks), 0);
+    FillChar(lastChan, SizeOf(lastChan), 0);
+    
     RegisterVariable('voicepack', @chVoicepack, false);
 
     MusicFN:='';

@@ -3124,22 +3124,13 @@ begin
 
     FlakesCount:= 0;
 
-    for i:= Low(ClansArray) to High(ClansArray) do
-        begin
-        ClansArray[i]:= nil;
-        end;
-
+    // ARM64 FIX: Initialize arrays with FillChar instead of loops
+    // Free Pascal ARM64 has issues with array[i] := nil pattern
+    FillChar(ClansArray, SizeOf(ClansArray), 0);
     SpawnClansArray:= ClansArray;
-
-    for i:= Low(TeamsArray) to High(TeamsArray) do
-        begin
-        TeamsArray[i]:= nil;
-        end;
-
-    for i:= Low(CountTexz) to High(CountTexz) do
-        begin
-        CountTexz[i]:= nil;
-        end;
+    
+    FillChar(TeamsArray, SizeOf(TeamsArray), 0);
+    FillChar(CountTexz, SizeOf(CountTexz), 0);
 
 end;
 
