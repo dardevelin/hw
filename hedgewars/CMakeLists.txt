@@ -27,11 +27,8 @@ if(UNIX)
         string(REPLACE "-O2" "-O1" CMAKE_Pascal_FLAGS_RELEASE "${CMAKE_Pascal_FLAGS_RELEASE}")
         # Note: -Cfv is for VFP (Vector Floating Point) which doesn't apply to ARM64
         # ARM64 uses NEON/Advanced SIMD by default
-        # CRITICAL: Disable hardened runtime features that conflict with FPC's code generation
-        # FPC's ARM64 backend doesn't generate code compatible with Apple's strict W^X enforcement
-        # Pass linker flags through FPC with -k prefix and proper format
-        add_flag_append(CMAKE_Pascal_FLAGS "-k-no_adhoc_codesign")
-        add_flag_append(CMAKE_Pascal_FLAGS "-k-no_fixup_chains")
+        # ARM64 on modern macOS requires proper code signing and fixup chains
+        # The binary will be ad-hoc signed by the linker automatically
     endif()
     
     if(${CMAKE_Pascal_COMPILER_VERSION} VERSION_GREATER 2.7 OR ${CMAKE_TARGET_ARCHITECTURES} MATCHES "x86_64" OR ${CMAKE_TARGET_ARCHITECTURES} MATCHES "i386")
