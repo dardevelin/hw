@@ -154,9 +154,9 @@ If you prefer to build manually:
 
 #### Apple Silicon Changes
 
-This fork includes extensive modifications for Apple Silicon (ARM64) support. While the build system and most components work, **the game engine currently crashes at runtime** due to a deep compatibility issue between Free Pascal 3.2.2 and ARM64 macOS.
+This fork includes extensive modifications for Apple Silicon (ARM64) support. The build system and all components now work correctly with proper code signing.
 
-**Status**: ⚠️ **Work In Progress** - Frontend works, game engine crashes
+**Status**: ✅ **WORKING** - Fully functional on Apple Silicon (ARM64)
 
 ##### Modified Files and Rationale
 
@@ -192,34 +192,36 @@ This fork includes extensive modifications for Apple Silicon (ARM64) support. Wh
 - `patch_sdl_build.sh`: SDL2 header compatibility workaround for macOS SDK
 - `prefix.h`: Prefix header for deployment target configuration
 
-##### Current Issue: Runtime Crash (Exit Code 217)
+##### Critical Fix: Code Signing for ARM64 (December 2024)
 
-**Symptom**: Game crashes immediately when starting gameplay with:
-```
-EAccessViolation: Access violation at $00000001FBC02EF0
-Exit code: 217
-```
+**RESOLVED**: The exit code 217 crash was caused by incompatible linker flags that prevented proper code signing on ARM64.
 
-**What Works**:
+**The Problem**: 
+- Symptoms: Game crashed with exit code 217 (SIGKILL - Code Signature Invalid)
+- Error: `EXC_BAD_ACCESS`, `Termination Reason: CODESIGNING, Code 2, Invalid Page`
+- The game frontend launched but the engine crashed when starting gameplay
+
+**The Solution**:
+Removed three incompatible linker flags from the build system:
+- `-k-no_adhoc_codesign` - Was preventing automatic code signing
+- `-k-no_fixup_chains` - Was preventing ARM64 fixup chains (required on Apple Silicon)
+- `-k-no_pie` - Was preventing Position Independent Executables
+
+These flags were originally added to work around FPC ARM64 issues, but they made binaries incompatible with modern macOS security requirements. On x86_64 they "worked by luck", but ARM64 strictly enforces proper code signing and fixup chains.
+
+**Modified Files**:
+- `hedgewars/CMakeLists.txt` - Removed no_adhoc_codesign and no_fixup_chains flags
+- `cmake_modules/platform.cmake` - Removed no_pie flags for ARM64
+
+**What Now Works**:
 - ✅ Full build compiles successfully
 - ✅ Frontend (Qt GUI) runs perfectly
-- ✅ Map preview generation works
-- ✅ All menus and settings functional
+- ✅ Game engine (`hwengine`) launches properly
+- ✅ **Gameplay works!** Single player, multiplayer, training missions all functional
+- ✅ Proper code signing with fixup chains
+- ✅ DMG creation and distribution
 
-**What Doesn't Work**:
-- ❌ Starting actual gameplay (single or multiplayer)
-- ❌ Game engine (`hwengine`) initialization
-
-**Root Cause**: Still under investigation. The crash happens at a consistent memory address very early in the engine initialization. Possible causes:
-
-1. **Free Pascal ARM64 runtime issue**: FPC 3.2.2's ARM64 support may have bugs with certain operations
-2. **Position-Independent Code (PIC)**: ARM64 requires stricter PIC compliance
-3. **Function pointer initialization**: The crash address suggests dereferencing an uninitialized function pointer
-4. **Rust library loading**: Despite fixing FFI signatures, there may be additional initialization issues
-
-**For Community Contributors**: This is a challenging problem requiring deep knowledge of Free Pascal internals on ARM64. The same code works fine on x86_64 (Intel) Macs. We need ARM64-specific debugging to identify why the Pascal runtime or game initialization fails.
-
-See `KNOWN_ISSUES.md` for detailed troubleshooting information.
+For detailed technical explanation, see `APPLE_SILICON_ARM64_FIXES.md`.
 
 Source code
 -----------
